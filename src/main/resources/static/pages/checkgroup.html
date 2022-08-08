@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- 页面meta -->
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>传智健康</title>
+        <meta name="description" content="传智健康">
+        <meta name="keywords" content="传智健康">
+        <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" name="viewport">
+        <!-- 引入样式 -->
+        <link rel="stylesheet" href="../plugins/elementui/index.css">
+        <link rel="stylesheet" href="../plugins/font-awesome/css/font-awesome.min.css">
+        <link rel="stylesheet" href="../css/style.css">
+        <!-- 引入组件库 -->
+        <script type="text/javascript" src="../js/jquery.min.js"></script>
+        <script src="../js/vue.js"></script>
+        <script src="../plugins/elementui/index.js"></script>
+        <script src="../js/axios-0.18.0.js"></script>
+        <style>
+            .datatable {
+                position: relative;
+                box-sizing: border-box;
+                -webkit-box-flex: 1;
+                width: 100%;
+                max-width: 100%;
+                font-size: 14px;
+                color: rgb(96, 98, 102);
+                overflow: hidden;
+                flex: 1 1 0%;
+            }
+            .datatable td, .datatable th {
+                padding: 12px 0;
+                min-width: 0;
+                -webkit-box-sizing: border-box;
+                box-sizing: border-box;
+                text-overflow: ellipsis;
+                vertical-align: middle;
+                position: relative;
+                text-align: left;
+            }
+        </style>
+    </head>
+    <body class="hold-transition">
+        <div id="app">
+            <div class="content-header">
+                <h1>TEST PLAN<small>Test Plan Management</small></h1>
+                <el-breadcrumb separator-class="el-icon-arrow-right" class="breadcrumb">
+                    <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+                    <el-breadcrumb-item>预约管理</el-breadcrumb-item>
+                    <el-breadcrumb-item>检查组管理</el-breadcrumb-item>
+                </el-breadcrumb>
+            </div>
+            <div class="app-container">
+                <div class="box">
+                    <div class="filter-container">
+                        <el-input placeholder="编码/名称/助记码" v-model="pagination.queryString" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter"></el-input>
+                        <el-button @click="findPage()" class="dalfBut">查询</el-button>
+                        <el-button @click="handleEnd()" class="dalfBut">停止</el-button>
+                        <el-button type="primary" class="butT" @click="handleCreate()">新建</el-button>
+                    </div>
+                    <el-table size="small" current-row-key="id" :data="dataList" stripe highlight-current-row>
+                        <el-table-column type="index" align="center" label="序号"></el-table-column>
+                        <el-table-column prop="id" label="id" align="center"></el-table-column>
+                        <el-table-column prop="name" label="name" align="center"></el-table-column>
+                        <el-table-column prop="srcRepo" label="srcRepo" align="center"></el-table-column>
+                        <el-table-column label="executed" align="center">
+                            <template slot-scope="scope">
+                                <span>{{ scope.row.executed == 'Y' ? '已完成' : scope.row.executed == 'E' ? '执行中' : '未开始'}}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="start" label="start" align="center"></el-table-column>
+                        <el-table-column prop="end" label="end" align="center"></el-table-column>
+                        <el-table-column label="操作" align="center">
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini" @click="execute(scope.row)">执行</el-button>
+                                <el-button type="primary" size="mini" @click="handleDetail(scope.row)">编辑</el-button>
+                                <el-button size="mini" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-container">
+                        <el-pagination
+                            class="pagiantion"
+                            @current-change="handleCurrentChange"
+                            :current-page="pagination.currentPage"
+                            :page-size="pagination.pageSize"
+                            layout="total, prev, pager, next, jumper"
+                            :total="pagination.total">
+                        </el-pagination>
+                    </div>
+                    <!-- 新增标签弹层 -->
+                    <div class="add-form">
+                        <el-dialog title="New Test Plan" :visible.sync="dialogFormVisible">
+                            <template>
+                                <el-tabs v-model="activeName" type="card">
+                                    <el-tab-pane label="基本信息" name="first">
+                                        <el-form label-position="right" ref="dataAddForm" :model="formData" :rules="rules" label-width="100px">
+                                            <el-row>
+                                                <el-col :span="12">
+                                                    <el-form-item label="name">
+                                                        <el-input v-model="formData.name"/>
+                                                    </el-form-item>
+                                                </el-col>
+                                                <el-col :span="12">
+                                                    <el-form-item label="srcRepo">
+                                                        <el-input v-model="formData.srcRepo"/>
+                                                    </el-form-item>
+                                                </el-col>
+                                            </el-row>
+                                            <el-row>
+                                                <el-col :span="12">
+                                                    <el-form-item prop = "start" label="开始行">
+                                                            <el-input v-model.number="formData.start"/>
+<!--                                                        <el-select v-model="formData.sex">-->
+<!--                                                            <el-option label="不限" value="0"></el-option>-->
+<!--                                                            <el-option label="男" value="1"></el-option>-->
+<!--                                                            <el-option label="女" value="2"></el-option>-->
+<!--                                                        </el-select>-->
+                                                    </el-form-item>
+                                                </el-col>
+                                                <el-col :span="12">
+                                                    <el-form-item prop = "end" label="结束行">
+                                                        <el-input v-model.number="formData.end"/>
+                                                    </el-form-item>
+                                                </el-col>
+                                            </el-row>
+                                            <el-row>
+                                                <el-col :span="24">
+                                                    <el-form-item label="说明">
+                                                        <el-input v-model="formData.remark" type="textarea"></el-input>
+                                                    </el-form-item>
+                                                </el-col>
+                                            </el-row>
+
+                                        </el-form>
+                                    </el-tab-pane>
+                                    <el-tab-pane label="Repo Info" name="second" >
+									<div class="checkScrol">
+                                        <table class="datatable">
+                                            <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th>id</th>
+                                                <th>name</th>
+                                                <th>version</th>
+                                                <th>srcRepo</th>
+                                                <th>srcCommit</th>
+                                                <th>existInPre</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr v-for="c in tableData">
+                                                <td>
+                                                    <input :id="c.id" v-model="repoIds" type="checkbox" :value="c.id">
+                                                </td>
+                                                <td><label :for="c.id">{{c.id}}</label></td>
+                                                <td><label :for="c.id">{{c.name}}</label></td>
+                                                <td><label :for="c.id">{{c.version}}</label></td>
+                                                <td><label :for="c.id">{{c.srcRepo}}</label></td>
+                                                <td><label :for="c.id">{{c.srcCommit}}</label></td>
+                                                <td><label :for="c.id">{{c.existInPre}}</label></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+									</div>
+                                    </el-tab-pane>
+                                </el-tabs>
+                            </template>
+                            <div slot="footer" class="dialog-footer">
+                                <el-button @click="findRepos()">查询</el-button>
+                                <el-button @click="dialogFormVisible = false">取消</el-button>
+                                <el-button type="primary" @click="handleAdd()">确定</el-button>
+                            </div>
+                        </el-dialog>
+                    </div>
+
+                    <!-- 编辑标签弹层 -->
+                    <div class="add-form">
+                        <el-dialog title="编辑计划" :visible.sync="dialogFormVisible4Edit">
+                            <template>
+                                <el-tabs v-model="activeName" type="card">
+                                    <el-tab-pane label="基本信息" name="first">
+                                        <el-form ref="dataEditForm" :model="formData" :rules="rules" label-position="right" label-width="100px">
+                                            <el-row>
+                                                <el-col :span="12">
+                                                    <el-form-item label="name">
+                                                        <el-input v-model="formData.name"/>
+                                                    </el-form-item>
+                                                </el-col>
+                                                <el-col :span="12">
+                                                    <el-form-item label="srcRepo">
+                                                        <el-input v-model="formData.srcRepo"/>
+                                                    </el-form-item>
+                                                </el-col>
+                                            </el-row>
+                                            <el-row>
+                                                <el-col :span="12">
+                                                    <el-form-item label="开始行" prop="start">
+                                                        <el-input v-model="formData.start"/>
+                                                        <!--                                                        <el-select v-model="formData.sex">-->
+                                                        <!--                                                            <el-option label="不限" value="0"></el-option>-->
+                                                        <!--                                                            <el-option label="男" value="1"></el-option>-->
+                                                        <!--                                                            <el-option label="女" value="2"></el-option>-->
+                                                        <!--                                                        </el-select>-->
+                                                    </el-form-item>
+                                                </el-col>
+                                                <el-col :span="12">
+                                                    <el-form-item label="结束行" prop="end">
+                                                        <el-input v-model.number="formData.end"/>
+                                                    </el-form-item>
+                                                </el-col>
+                                            </el-row>
+                                            <el-row>
+                                                <el-col :span="12">
+                                                    <el-form-item label="状态">
+                                                        <el-select v-model.number="formData.executed">
+                                                            <el-option label="已执行" value="Y"></el-option>
+                                                            <el-option label="待办" value="N"></el-option>
+                                                            <el-option label="处理中" value="E"></el-option>
+                                                        </el-select>
+                                                        <!--                                                        <el-select v-model="formData.sex">-->
+                                                        <!--                                                            <el-option label="不限" value="0"></el-option>-->
+                                                        <!--                                                            <el-option label="男" value="1"></el-option>-->
+                                                        <!--                                                            <el-option label="女" value="2"></el-option>-->
+                                                        <!--                                                        </el-select>-->
+                                                    </el-form-item>
+                                                </el-col>
+                                                <el-col :span="12">
+                                                    <el-form-item label="创建时间">
+                                                        <el-input v-model="formData.time"/>
+                                                    </el-form-item>
+                                                </el-col>
+                                            </el-row>
+                                            <el-row>
+                                                <el-col :span="24">
+                                                    <el-form-item label="说明">
+                                                        <el-input v-model="formData.remark" type="textarea"></el-input>
+                                                    </el-form-item>
+                                                </el-col>
+                                            </el-row>
+
+                                        </el-form>
+                                    </el-tab-pane>
+                                    <el-tab-pane label="Repo Info" name="second" >
+                                        <div class="checkScrol">
+                                            <table class="datatable">
+                                                <thead>
+                                                <tr>
+                                                    <th></th>
+                                                    <th>id</th>
+                                                    <th>name</th>
+                                                    <th>version</th>
+                                                    <th>srcRepo</th>
+                                                    <th>srcCommit</th>
+                                                    <th>existInPre</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                <tr v-for="c in tableData">
+                                                    <td>
+                                                        <input :id="c.id" v-model="repoIds" type="checkbox" :value="c.id">
+                                                    </td>
+                                                    <td><label :for="c.id">{{c.id}}</label></td>
+                                                    <td><label :for="c.id">{{c.name}}</label></td>
+                                                    <td><label :for="c.id">{{c.version}}</label></td>
+                                                    <td><label :for="c.id">{{c.srcRepo}}</label></td>
+                                                    <td><label :for="c.id">{{c.srcCommit}}</label></td>
+                                                    <td><label :for="c.id">{{c.existInPre}}</label></td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </el-tab-pane>
+                                </el-tabs>
+                            </template>
+                            <div slot="footer" class="dialog-footer">
+                                <el-button @click="findRepos()">查询</el-button>
+                                <el-button @click="exportExcel" :disabled="!exportAvailable">导出Excel</el-button>
+<!--                                <el-button @click="findRepos()"  class="dalfBut" :disabled="exportAvailable">导出</el-button>-->
+                                <el-button @click="dialogFormVisible4Edit = false">取消</el-button>
+                                <el-button type="primary" @click="handleEdit()">确定</el-button>
+                            </div>
+                        </el-dialog>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+
+    <script>
+        var vue = new Vue({
+            el: '#app',
+            data:{
+                activeName:'first',//添加/编辑窗口Tab标签名称
+                pagination: {//分页相关属性
+                    currentPage: 1,
+                    pageSize:10,
+                    total:100,
+                    queryString:null,
+                },
+                dataList: [
+                    {
+                        "id":"3710",
+                        "name":"vue",
+                        "srcRepo":"srcRepo",
+                        "remark":"re",
+                        "start":"12345"
+                    }
+                ],//列表数据
+                formData: {
+                    // id:'4',
+                    executed:'Y'
+                },//表单数据
+                tableData:[],//新增和编辑表单中对应的检查项列表数据
+
+                repoIds:[],//新增和编辑表单中检查项对应的复选框，基于双向绑定可以进行回显和数据提交
+                dialogFormVisible: false,//控制添加窗口显示/隐藏
+                dialogFormVisible4Edit:false, //控制编辑窗口显示/隐藏,
+                exportAvailable:false,
+                rules: {//校验规则
+                    start: [{ required: false, message: '开始行为必填项', trigger: 'blur' },{type: 'number', message: '必须为数字值'}],
+                    end: [{ required: false, message: '结束行为必填项', trigger: 'blur' },{type: 'number', message: '数量必须为数字值'}]
+                }
+            },
+            created() {
+                this.findPage();
+            },
+            methods: {
+                //编辑
+                handleEdit() {
+                    //发送ajax请求，将修改后的表单数据（检查组基本信息、勾选的检查项）提交到后台进行处理
+                    axios.post("/plan/edit?repoIds=" + this.repoIds,this.formData).then((res) => {
+                        //关闭编辑窗口
+                        this.dialogFormVisible4Edit = false;
+                        if(res.data.flag){
+                            //操作成功
+                            this.$message({
+                                type:'success',
+                                message:res.data.message
+                            });
+                        }else{
+                            //操作失败
+                            this.$message.error(res.data.message);
+                        }
+                    }).finally(() =>{
+                        this.findPage();
+                    });
+                },
+                //添加
+                handleAdd () {
+                    //alert(this.repoIds);
+                    //发送ajax请求，将表单数据提交到后台进行处理
+                    axios.post("/plan/add?repoIds=" + this.repoIds,this.formData).then((res) => {
+                        //关闭新增窗口
+                        this.dialogFormVisible = false;
+                        if(res.data.flag){
+                            //操作成功
+                            this.$message({
+                                type:'success',
+                                message:res.data.message
+                            });
+                        }else{
+                            //操作失败
+                            this.$message.error(res.data.message);
+                        }
+                    }).finally(() => {
+                        //重新进行分页查询
+                        this.findPage();
+                    });
+                },
+
+                findRepos(){
+                    // console.log("alert");
+                    this.$refs['dataAddForm'].validate((valid) => {
+                        if (valid) {
+                            axios.post("/plan/findRepos", this.formData).then((res) => {
+                                //为VUE对象的模型数据赋值，基于双向数据绑定展示到页面
+                                if(res.data.flag){//执行成功
+                                    //新增成功后，重新调用分页查询方法，查询出最新的数据 res.data 是整个响应json,res
+                                    //res 是更大的响应对象
+                                    this.tableData = res.data.data.list;//当前页展示的数据集合
+                                    // this.pagination.total = res.data.total;//总数据量
+                                    this.repoIds = res.data.data.repoIds;
+                                    this.formData.start = this.repoIds[0];
+                                    //弹出提示信息
+                                    this.$message({
+                                        message:res.data.message,
+                                        type:'success'
+                                    });
+                                }else{//执行失败
+                                    //弹出提示
+                                    this.$message.error(res.data.message);
+                                }
+                            });
+                        }else{
+                            //校验不通过
+                            this.$message.error("数据校验失败，请检查你的输入信息是否正确！");
+                            return false;
+                        }
+                    });
+                },
+                //分页查询
+                findPage() {
+                    //封装分页参数
+                    var param = {
+                        currentPage:this.pagination.currentPage,
+                        pageSize:this.pagination.pageSize,
+                        queryString:this.pagination.queryString
+                    };
+                    //发送ajax请求，提交分页相关参数
+                    axios.post("/plan/findPage",param).then((res) => {
+                        //为VUE对象的模型数据赋值，基于双向数据绑定展示到页面
+                        this.dataList = res.data.rows;//当前页展示的数据集合
+                        this.pagination.total = res.data.total;//总数据量
+                    });
+                },
+                // 重置表单
+                resetForm() {
+                    this.formData = {};
+                },
+                handleStart(){
+                    axios.get("/task/start").then((res) => {
+                        if(res.data.flag){
+                            //查询到数据
+                            this.$message({
+                                type:"info",
+                                message:res.data.message
+                            })
+                        }else{
+                            //查询数据失败
+                            this.$message.error(res.data.message);
+                        }
+                    });
+                },
+                handleEnd(){
+                    axios.get("/task/stop").then((res) => {
+                        if(res.data.flag){
+                            this.$message({
+                                type:"info",
+                                message:res.data.message
+                            })
+                        }else{
+                            //查询数据失败
+                            this.$message.error(res.data.message);
+                        }
+                    });
+                },
+                // 弹出添加窗口
+                handleCreate() {
+                    this.resetForm();
+                    this.dialogFormVisible = true;
+                    //发送ajax请求，查询所有的检查项信息，转为json，赋值给tableData
+                    this.activeName = 'first';//默认选中first对应的tab
+                    this.repoIds = [];//重置复选框
+
+                    // axios.get("/plan/findPage").then((res) => {
+                    //     if(res.data.flag){
+                    //         //查询检查项数据成功
+                    //         this.tableData = res.data.data;
+                    //     }else{
+                    //         //查询检查项数据失败
+                    //         this.$message.error(res.data.message);
+                    //     }
+                    // });
+                },
+                // 弹出编辑窗口
+                handleDetail(row) {
+                    //弹出编辑窗口
+                    this.dialogFormVisible4Edit = true;
+                    this.activeName = 'first';
+                    //发送ajax请求，根据检查组ID查询当前检查组数据，用于基本信息的回显
+                    axios.get("/plan/findById?id=" + row.id).then((res) => {
+                        if(res.data.flag){
+                            //查询到数据
+                            this.formData = res.data.data;
+                            if(this.formData.executed==='Y'){
+                                // console.log(this.formData.executed);
+                                // console.log(this.formData.executed==='Y');
+                                this.exportAvailable = true;
+                            }
+                        }else{
+                            //查询数据失败
+                            this.$message.error(res.data.message);
+                        }
+                    });
+                    //  repo 太多，需要主要发送条件查询
+                    // //发送ajax请求，查询所有的检查项数据，用于展示检查项列表
+                    // axios.get("/checkitem/findAll.do").then((res) => {
+                    //     if(res.data.flag){
+                    //         //查询检查项数据成功
+                    //         this.tableData = res.data.data;
+                    //         //发送ajax请求，根据检查组ID查询当前检查组包含的检查项ID，用于页面复选框回显
+                    //         axios.get("/checkgroup/findrepoIdsByCheckGroupId.do?id=" + row.id).then((res) => {
+                    //             if(res.data.flag){
+                    //                 this.repoIds = res.data.data;
+                    //             }else{
+                    //                 this.$message.error(res.data.message);
+                    //             }
+                    //         });
+                    //     }else{
+                    //         //查询检查项数据失败
+                    //         this.$message.error(res.data.message);
+                    //     }
+                    // });
+
+                },
+                exportExcel(){
+                    this.$confirm( '确认要导出吗?','确认导出结果',{
+                        type:'info'
+                    }).then(()=>{
+                        window.location.href = '/plan/export?id=' + this.formData.id;
+                    }).catch(()=>{
+                        this.$message({
+                            type:'info',
+                            message:'操作已取消'
+                        });
+                    });
+                },
+                execute(row){
+                    this.$confirm( '确认要执行吗?','确认执行测试计划',{
+                        type:'info'
+                    }).then(()=>{
+                            axios.post("/task/start?id=" + row.id, this.repoIds).then((res) => {
+                                if(res.data.flag){
+                                    //执行成功
+                                    //弹出成功提示信息
+                                    this.$message({
+                                        type:'success',
+                                        message:res.data.message
+                                    });
+                                    //重新进行分页查询
+                                    this.findPage();
+                                }else{
+                                    //执行失败
+                                    this.$message.error(res.data.message);
+                                };
+                            //
+                            }).catch((r)=>{
+                                this.showMessage(r);
+                            });
+                    }).catch(()=>{
+                        this.$message({
+                            type:'info',
+                            message:'操作已取消'
+                        });
+                    });
+                },
+                //切换页码
+                handleCurrentChange(currentPage) {
+                    //为模型数据赋值（当前页面）
+                    this.pagination.currentPage = currentPage;
+                    this.findPage();
+                },
+                // 删除
+                handleDelete(row) {
+                    this.$confirm('确认要删除吗','确认操作',{
+                        type:"warning"
+                    }).then(()=>{
+                        axios.delete("/plan/delete?id="+row.id).then((res)=>{
+                            this.$message({
+                                type:'success',
+                                message:res.data.message
+                            });
+                            //重新进行分页查询
+                            this.findPage();
+                        }).catch((r)=>{
+                            this.showMessage(r);
+                        });
+                    }).catch(()=>{
+                        this.$message({
+                            type:"info",
+                            message:"操作已取消"
+                        })
+                    })
+                },
+                showMessage(r){
+                    if(r == 'Error: Request failed with status code 403'){
+                        //权限不足
+                        this.$message.error('无访问权限');
+                        return;
+                    }else{
+                        this.$message.error('未知错误');
+                        return;
+                    }
+                }
+            }
+        })
+    </script>
+</html>
